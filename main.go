@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"strings"
 )
 
 func main() {
@@ -53,29 +52,28 @@ func main() {
 }
 
 func parseRequest(req []byte) (*Request, error) {
-	reqString := string(req)
-	firstLineInd := strings.Index(reqString, "\r\n")
+	firstLineInd := bytes.Index(req, []byte("\r\n"))
 	if firstLineInd == -1 {
 		panic("")
 	}
 
-	firstLine := reqString[:firstLineInd]
+	firstLine := req[:firstLineInd]
 
-	methodEndInd := strings.Index(firstLine, " ")
+	methodEndInd := bytes.Index(firstLine, []byte(" "))
 	if methodEndInd == -1 {
 		panic("")
 	}
 	method := firstLine[:methodEndInd]
 	fmt.Println(method)
 
-	endpointInd := strings.Index(firstLine[methodEndInd+1:], " ")
+	endpointInd := bytes.Index(firstLine[methodEndInd+1:], []byte(" "))
 	if endpointInd == -1 {
 		panic("")
 	}
 	endpoint := firstLine[methodEndInd+1:][:endpointInd]
 	fmt.Println(endpoint)
 
-	protocolInd := strings.Index(firstLine[methodEndInd+1:][endpointInd+1:], "/")
+	protocolInd := bytes.Index(firstLine[methodEndInd+1:][endpointInd+1:], []byte("/"))
 	if protocolInd == -1 {
 		panic("")
 	}
@@ -85,7 +83,7 @@ func parseRequest(req []byte) (*Request, error) {
 	protocolVersion := firstLine[methodEndInd+1:][endpointInd+1:][protocolInd+1:]
 	fmt.Println(protocolVersion)
 
-	bodyInd := strings.Index(reqString, "\r\n\r\n")
+	bodyInd := bytes.Index(req, []byte("\r\n\r\n"))
 	if bodyInd == -1 {
 		panic("")
 	}
@@ -158,9 +156,9 @@ func parseHeaders(headersString []byte) map[string]string {
 }
 
 type Request struct {
-	Endpoint        string
-	Protocol        string
-	ProtocolVersion string
+	Endpoint        []byte
+	Protocol        []byte
+	ProtocolVersion []byte
 	Body            []byte
 	Headers         map[string]string
 }
