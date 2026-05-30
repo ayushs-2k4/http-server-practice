@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -16,6 +19,11 @@ func main() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				fmt.Println("req closed")
+				conn.Close()
+				return
+			}
 			log.Fatal(err)
 		}
 		go func() {
@@ -25,21 +33,39 @@ func main() {
 			req.RequestCompleted = false
 			var totalBytes []byte
 
-			for !req.RequestCompleted {
-				reqBytes := make([]byte, 1024)
-				k, err := conn.Read(reqBytes)
-				if err != nil {
-					log.Fatal(err)
+			for {
+				for !req.RequestCompleted {
+					if len(totalBytes) != 0 {
+						parseRequestIncrementally(&req, &totalBytes)
+						if req.RequestCompleted {
+							break
+						}
+					}
+					reqBytes := make([]byte, 1024)
+					k, err := conn.Read(reqBytes)
+					if err != nil {
+						if errors.Is(err, io.EOF) {
+							fmt.Println("req closed")
+							conn.Close()
+							return
+						}
+						log.Fatal(err)
+					}
+					reqBytes = reqBytes[:k]
+					totalBytes = append(totalBytes, reqBytes...)
+					parseRequestIncrementally(&req, &totalBytes)
 				}
-				reqBytes = reqBytes[:k]
-				totalBytes = append(totalBytes, reqBytes...)
-				parseRequestIncrementally(&req, &totalBytes)
+
+				// req got completed, there may be some more requests lined up
+				fmt.Println(req)
+				req = Request{}
+
+				res := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello"
+
+				conn.Write([]byte(res))
+				//conn.Close()
 			}
 
-			res := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello"
-			//
-			conn.Write([]byte(res))
-			//conn.Close()
 		}()
 	}
 }
