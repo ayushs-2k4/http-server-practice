@@ -162,6 +162,8 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) {
 		if len(*reqBytes) >= contentLengthInt {
 			req.Body = (*reqBytes)[:contentLengthInt]
 			req.RequestCompleted = true
+		} else {
+			return
 		}
 	}
 
