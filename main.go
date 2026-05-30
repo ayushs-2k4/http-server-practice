@@ -29,7 +29,6 @@ func main() {
 					log.Fatal(err)
 				}
 
-				fmt.Println(k)
 				totalBytes = append(totalBytes, bytes[:k]...)
 				fmt.Println(string(totalBytes))
 			}
@@ -64,24 +63,20 @@ func parseRequest(req []byte) (*Request, error) {
 		panic("")
 	}
 	method := firstLine[:methodEndInd]
-	fmt.Println(method)
 
 	endpointInd := bytes.Index(firstLine[methodEndInd+1:], []byte(" "))
 	if endpointInd == -1 {
 		panic("")
 	}
 	endpoint := firstLine[methodEndInd+1:][:endpointInd]
-	fmt.Println(endpoint)
 
 	protocolInd := bytes.Index(firstLine[methodEndInd+1:][endpointInd+1:], []byte("/"))
 	if protocolInd == -1 {
 		panic("")
 	}
 	protocol := firstLine[methodEndInd+1:][endpointInd+1:][:protocolInd]
-	fmt.Println(protocol)
 
 	protocolVersion := firstLine[methodEndInd+1:][endpointInd+1:][protocolInd+1:]
-	fmt.Println(protocolVersion)
 
 	bodyInd := bytes.Index(req, []byte("\r\n\r\n"))
 	if bodyInd == -1 {
@@ -89,15 +84,12 @@ func parseRequest(req []byte) (*Request, error) {
 	}
 
 	headersString := req[firstLineInd+2 : bodyInd]
-	fmt.Println(headersString)
 	headers := parseHeaders(headersString)
 	body := req[bodyInd+4:]
 
-	fmt.Println(headers)
-	fmt.Println(body)
-
 	return &Request{
 		Endpoint:        endpoint,
+		Method:          method,
 		Protocol:        protocol,
 		ProtocolVersion: protocolVersion,
 		Body:            body,
@@ -157,6 +149,7 @@ func parseHeaders(headersString []byte) map[string]string {
 
 type Request struct {
 	Endpoint        []byte
+	Method          []byte
 	Protocol        []byte
 	ProtocolVersion []byte
 	Body            []byte
