@@ -22,9 +22,10 @@ func main() {
 			conn := conn
 			var req Request
 			req.HeadersCompleted = false
+			req.RequestCompleted = false
 			var totalBytes []byte
 
-			for {
+			for !req.RequestCompleted {
 				reqBytes := make([]byte, 1024)
 				k, err := conn.Read(reqBytes)
 				if err != nil {
@@ -32,9 +33,7 @@ func main() {
 				}
 				reqBytes = reqBytes[:k]
 				totalBytes = append(totalBytes, reqBytes...)
-				if parseRequestIncrementally(&req, &totalBytes) {
-					break
-				}
+				parseRequestIncrementally(&req, &totalBytes)
 			}
 
 			res := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello"
@@ -45,7 +44,7 @@ func main() {
 	}
 }
 
-func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
+func parseRequestIncrementally(req *Request, reqBytes *[]byte) {
 	if req == nil {
 		panic("req is nil")
 	}
@@ -57,7 +56,7 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
 		methodEndInd := bytes.Index(*reqBytes, []byte(" "))
 		if methodEndInd == -1 {
 			// even method name didn't came
-			return false
+			return
 		}
 
 		methodName := (*reqBytes)[:methodEndInd]
@@ -70,7 +69,7 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
 		endpointEndInd := bytes.Index(*reqBytes, []byte(" "))
 		if endpointEndInd == -1 {
 			// endpoint has not came completely yet
-			return false
+			return
 		}
 
 		endpoint := (*reqBytes)[:endpointEndInd]
@@ -83,7 +82,7 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
 		protocolEndInd := bytes.Index(*reqBytes, []byte("/"))
 		if protocolEndInd == -1 {
 			//protocol hasn't came yet completely
-			return false
+			return
 		}
 
 		protocol := (*reqBytes)[:protocolEndInd]
@@ -94,9 +93,9 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
 
 	if req.ProtocolVersion == nil {
 		protocolVersionEndInd := bytes.Index(*reqBytes, []byte("\r\n"))
-		if protocolVersionEndInd == 01 {
+		if protocolVersionEndInd == -1 {
 			//protocol version hasn't came yet completely
-			return false
+			return
 		}
 
 		protocolVersion := (*reqBytes)[:protocolVersionEndInd]
@@ -111,7 +110,7 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
 			headerEndInd := bytes.Index(*reqBytes, []byte("\r\n"))
 			if headerEndInd == -1 {
 				//this specific hasn't came yet completely
-				return false
+				return
 			}
 			if headerEndInd == 0 {
 				// headers ended
@@ -136,12 +135,11 @@ func parseRequestIncrementally(req *Request, reqBytes *[]byte) bool {
 
 		if len(*reqBytes) >= contentLengthInt {
 			req.Body = (*reqBytes)[:contentLengthInt]
-		} else {
-			return false
+			req.RequestCompleted = true
 		}
 	}
 
-	return true
+	req.RequestCompleted = true
 }
 
 func parseHeaders(headersString []byte) map[string]string {
@@ -179,4 +177,5 @@ type Request struct {
 	Body             []byte
 	Headers          map[string]string
 	HeadersCompleted bool
+	RequestCompleted bool
 }
