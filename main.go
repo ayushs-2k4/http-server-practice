@@ -60,7 +60,8 @@ func main() {
 				fmt.Println(req)
 				req = Request{}
 
-				res := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nhello"
+				result := "hello"
+				res := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(result), result)
 
 				conn.Write([]byte(res))
 				//conn.Close()
